@@ -36,8 +36,8 @@ public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandle
 
         // Expression input field - positioned in the rename area of the anvil
         this.expressionField = new TextFieldWidget(this.textRenderer,
-            x + 59, y + 24, 103, 12, Text.literal("Expression"));
-        this.expressionField.setDrawsBackground(false);
+            x + 59, y + 20, 112, 16, Text.literal("Expression"));
+        this.expressionField.setDrawsBackground(true);
         this.expressionField.setMaxLength(256);
         this.expressionField.setChangedListener(this::onExpressionChanged);
         updatePlaceholder();
@@ -92,7 +92,7 @@ public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandle
         // Draw expression label above the text field area
         String label = "parametric".equals(this.handler.getMode())
             ? "x(t)|y(t)|z(t):" : "f(x) =";
-        context.drawText(this.textRenderer, label, 59, 14, 0x808080, false);
+        context.drawText(this.textRenderer, label, 59, 11, 0x808080, false);
     }
 
     @Override

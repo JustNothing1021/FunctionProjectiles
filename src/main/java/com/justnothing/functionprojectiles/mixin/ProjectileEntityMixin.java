@@ -127,6 +127,11 @@ public abstract class ProjectileEntityMixin {
                 return true;
             }
         }
+        if (self instanceof PersistentProjectileEntity arrow
+            && ((PersistentProjectileAccessor) arrow).getInGround()) {
+            released.add(self.getUuid());
+            return true;
+        }
         if (self instanceof FishingBobberEntity) {
             if (self.isTouchingWater()) {
                 released.add(self.getUuid());

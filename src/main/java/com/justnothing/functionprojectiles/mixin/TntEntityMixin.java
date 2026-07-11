@@ -27,14 +27,15 @@ public abstract class TntEntityMixin {
     private static final double MAX_PARTICLE_SPACING = 0.1;
     private static final double MAX_INTERPOLATION_DIST = 10.0;
 
-    /** Tracks how many times a trajectory TNT has hit a solid block. */
     private static final ConcurrentHashMap<UUID, Integer> collisionHits = new ConcurrentHashMap<>();
-    /** True if the TNT was already inside a block when trajectory started. */
     private static final ConcurrentHashMap<UUID, Boolean> startedInBlock = new ConcurrentHashMap<>();
 
     @Inject(method = "tick", at = @At("HEAD"))
     private void onTickHead(CallbackInfo ci) {
         TntEntity self = (TntEntity) (Object) this;
+        if (FunctionTrajectory.hasTrajectory(self.getUuid())) {
+            self.setFuse(80); // prevent auto-explosion from fuse
+        }
         if (self.getWorld().isClient) return;
 
         UUID uuid = self.getUuid();

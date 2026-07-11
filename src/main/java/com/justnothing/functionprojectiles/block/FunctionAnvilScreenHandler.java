@@ -190,7 +190,7 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
             return;
         }
 
-        ItemStack resultStack = inputStack.copyWithCount(1);
+        ItemStack resultStack = inputStack.copy();
 
         if ("parametric".equals(mode)) {
             String[] parts = newItemName.split("\\|", 3);
@@ -216,7 +216,7 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
         if (!player.getAbilities().creativeMode) {
             player.addExperienceLevels(-EXP_COST);
         }
-        input.getStack(0).decrement(1);
+        input.getStack(0).decrement(stack.getCount());
         updateResult();
         this.sendContentUpdates();
     }
