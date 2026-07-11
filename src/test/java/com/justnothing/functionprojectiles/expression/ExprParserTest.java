@@ -483,15 +483,15 @@ class ExprParserTest {
 
         @Test
         void maxLengthExceeded() {
-            String input = "1" + "+1".repeat(128); // 1 + 128*2 = 257 chars
-            assertEquals(257, input.length());
+            String input = "1" + "+1".repeat(512); // 1 + 512*2 = 1025 chars
+            assertEquals(1025, input.length());
             assertThrows(ExprParseException.class, () -> ExprParser.parse(input));
         }
 
         @Test
         void deeplyNestedParens() {
-            // 21 levels of nesting exceeds MAX_DEPTH (20)
-            String input = "(".repeat(21) + "1" + ")".repeat(21);
+            // 51 levels of nesting exceeds MAX_DEPTH (50)
+            String input = "(".repeat(51) + "1" + ")".repeat(51);
             assertThrows(ExprParseException.class, () -> ExprParser.parse(input));
         }
     }

@@ -10,6 +10,7 @@ import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -19,6 +20,8 @@ public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandle
     private static final Identifier TEXTURE = Identifier.of("minecraft", "textures/gui/container/anvil.png");
     private TextFieldWidget expressionField;
     private ButtonWidget modeButton;
+    private boolean autoFilled = false;
+    private ItemStack lastInputStack = ItemStack.EMPTY;
 
     public FunctionAnvilScreen(FunctionAnvilScreenHandler handler,
                                 PlayerInventory inventory, Text title) {
@@ -38,7 +41,7 @@ public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandle
         this.expressionField = new TextFieldWidget(this.textRenderer,
             x + 59, y + 20, 112, 16, Text.literal("Expression"));
         this.expressionField.setDrawsBackground(true);
-        this.expressionField.setMaxLength(256);
+        this.expressionField.setMaxLength(1024);
         this.expressionField.setChangedListener(this::onExpressionChanged);
         updatePlaceholder();
         this.addSelectableChild(this.expressionField);
@@ -101,23 +104,38 @@ public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandle
         if (this.expressionField != null) {
             this.expressionField.render(context, mouseX, mouseY, delta);
         }
-        // Auto-fill expression from existing component when item is placed
-        if (expressionField != null && expressionField.getText().isEmpty()) {
-            net.minecraft.item.ItemStack stack = this.handler.slots.get(0).getStack();
-            if (!stack.isEmpty()) {
-                FunctionComponent fc = stack.get(ModComponents.FUNCTION);
-                if (fc != null) {
-                    expressionField.setText(fc.expression());
-                    onExpressionChanged(fc.expression());
-                } else {
-                    ParametricComponent pc = stack.get(ModComponents.PARAMETRIC);
-                    if (pc != null) {
-                        String expr = pc.expressionX() + "|" + pc.expressionY() + "|" + pc.expressionZ();
-                        expressionField.setText(expr);
-                        onExpressionChanged(expr);
+        // Auto-fill expression from existing component only once when item is first placed
+        ItemStack currentInput = this.handler.slots.get(0).getStack();
+        boolean inputChanged = !ItemStack.areEqual(lastInputStack, currentInput);
+        if (inputChanged) {
+            lastInputStack = currentInput.copy();
+            autoFilled = false;
+        }
+        if (!autoFilled && expressionField != null && expressionField.getText().isEmpty() && !currentInput.isEmpty()) {
+            FunctionComponent fc = currentInput.get(ModComponents.FUNCTION);
+            if (fc != null) {
+                expressionField.setText(fc.expression());
+                onExpressionChanged(fc.expression());
+                // Also sync mode
+                if (!"function".equals(this.handler.getMode())) {
+                    this.handler.setMode("function");
+                    this.modeButton.setMessage(getModeButtonText());
+                    updatePlaceholder();
+                }
+            } else {
+                ParametricComponent pc = currentInput.get(ModComponents.PARAMETRIC);
+                if (pc != null) {
+                    String expr = pc.expressionX() + "|" + pc.expressionY() + "|" + pc.expressionZ();
+                    expressionField.setText(expr);
+                    onExpressionChanged(expr);
+                    if (!"parametric".equals(this.handler.getMode())) {
+                        this.handler.setMode("parametric");
+                        this.modeButton.setMessage(getModeButtonText());
+                        updatePlaceholder();
                     }
                 }
             }
+            autoFilled = true;
         }
     }
 
@@ -141,6 +159,12 @@ public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandle
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (this.expressionField != null && this.expressionField.isActive()) {
             if (this.expressionField.keyPressed(keyCode, scanCode, modifiers)) {
+                return true;
+            }
+            // Consume key events when the text field is focused to prevent
+            // game key bindings (like 'E' for inventory) from firing,
+            // but allow Escape to close the screen
+            if (keyCode != 256) { // GLFW_KEY_ESCAPE
                 return true;
             }
         }

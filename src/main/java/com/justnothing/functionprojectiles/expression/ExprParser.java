@@ -8,8 +8,8 @@ import java.util.function.DoubleUnaryOperator;
 
 public class ExprParser {
 
-    private static final int MAX_LENGTH = 256;
-    private static final int MAX_DEPTH = 20;
+    private static final int MAX_LENGTH = 1024;
+    private static final int MAX_DEPTH = 50;
 
     private static final Map<String, Double> CONSTANTS = Map.of(
             "pi", Math.PI,
@@ -28,7 +28,9 @@ public class ExprParser {
         FUNCTIONS.put("sqrt", Math::sqrt);
         FUNCTIONS.put("abs", Math::abs);
         FUNCTIONS.put("log", Math::log);
+        FUNCTIONS.put("ln", Math::log);
         FUNCTIONS.put("log10", Math::log10);
+        FUNCTIONS.put("log2", x -> Math.log(x) / Math.log(2));
         FUNCTIONS.put("exp", Math::exp);
         FUNCTIONS.put("ceil", Math::ceil);
         FUNCTIONS.put("floor", Math::floor);

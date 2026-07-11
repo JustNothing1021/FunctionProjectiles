@@ -17,6 +17,8 @@ public class FunctionTrajectory {
 
     /** Number of extra steps to look ahead when encountering NaN/Infinity before giving up. */
     private static final int LOOKAHEAD_STEPS = 3;
+    /** Maximum absolute value for any world coordinate — prevents long overflow in chunk system. */
+    private static final double MAX_COORD = 3.0E7;
 
     public enum Mode {
         FUNCTION,   // f(x) mode
@@ -161,8 +163,8 @@ public class FunctionTrajectory {
             double prevY = data.expression().evaluate(data.currentParam());
             double y = data.expression().evaluate(newParam);
 
-            if (isInvalid(y)) {
-                return tryLookaheadFunction(data, newParam, dt, y);
+            if (isInvalid(y) || isInvalid(prevY)) {
+                return tryLookaheadFunction(data, newParam, dt, isInvalid(y) ? y : prevY);
             }
 
             // Subdivide if y changes too fast (prevents skipping over the ground)
@@ -171,10 +173,15 @@ public class FunctionTrajectory {
                 double scale = MAX_Y_CHANGE_PER_TICK / dy;
                 newParam = data.currentParam() + dt * scale;
                 y = data.expression().evaluate(newParam);
+                if (isInvalid(y)) {
+                    return tryLookaheadFunction(data, newParam, dt, y);
+                }
             }
 
             Vec3d localPos = new Vec3d(newParam, y, 0);
-            return TrajectoryResult.position(localToWorld(localPos, data), newParam);
+            Vec3d worldPos = localToWorld(localPos, data);
+            if (!isInBounds(worldPos)) return TrajectoryResult.nan();
+            return TrajectoryResult.position(worldPos, newParam);
 
         } else {
             ParametricExpression.Point point = data.parametric().evaluate(newParam);
@@ -184,12 +191,20 @@ public class FunctionTrajectory {
             }
 
             Vec3d localPos = new Vec3d(point.x(), point.y(), point.z());
-            return TrajectoryResult.position(localToWorld(localPos, data), newParam);
+            Vec3d worldPos = localToWorld(localPos, data);
+            if (!isInBounds(worldPos)) return TrajectoryResult.nan();
+            return TrajectoryResult.position(worldPos, newParam);
         }
     }
 
     private static boolean isInvalid(double value) {
         return Double.isNaN(value) || Double.isInfinite(value);
+    }
+
+    private static boolean isInBounds(Vec3d pos) {
+        return Math.abs(pos.x) <= MAX_COORD
+            && Math.abs(pos.y) <= MAX_COORD
+            && Math.abs(pos.z) <= MAX_COORD;
     }
 
     /** Look ahead a few steps to see if the function recovers from NaN/Infinity. */
@@ -201,7 +216,7 @@ public class FunctionTrajectory {
             if (!isInvalid(y)) {
                 Vec3d localPos = new Vec3d(lookParam, y, 0);
                 Vec3d worldPos = localToWorld(localPos, data);
-                return TrajectoryResult.position(worldPos, lookParam);
+                if (isInBounds(worldPos)) return TrajectoryResult.position(worldPos, lookParam);
             }
         }
         // All lookahead failed
@@ -217,7 +232,7 @@ public class FunctionTrajectory {
             if (!isInvalid(point.x()) && !isInvalid(point.y()) && !isInvalid(point.z())) {
                 Vec3d localPos = new Vec3d(point.x(), point.y(), point.z());
                 Vec3d worldPos = localToWorld(localPos, data);
-                return TrajectoryResult.position(worldPos, lookParam);
+                if (isInBounds(worldPos)) return TrajectoryResult.position(worldPos, lookParam);
             }
         }
         // All lookahead failed — check which component was NaN

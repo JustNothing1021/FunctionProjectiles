@@ -157,20 +157,6 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
             return;
         }
 
-        // Auto-fill expression from existing component when first placed
-        if (newItemName == null || newItemName.isBlank()) {
-            FunctionComponent existingFc = inputStack.get(ModComponents.FUNCTION);
-            if (existingFc != null) {
-                newItemName = existingFc.expression();
-                mode = "function";
-            }
-            ParametricComponent existingPc = inputStack.get(ModComponents.PARAMETRIC);
-            if (existingPc != null) {
-                newItemName = existingPc.expressionX() + "|" + existingPc.expressionY() + "|" + existingPc.expressionZ();
-                mode = "parametric";
-            }
-        }
-
         if (newItemName == null || newItemName.isBlank()) {
             output.setStack(0, ItemStack.EMPTY);
             levelCost.set(0);
@@ -193,12 +179,14 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
         ItemStack resultStack = inputStack.copy();
 
         if ("parametric".equals(mode)) {
+            resultStack.remove(ModComponents.FUNCTION);
             String[] parts = newItemName.split("\\|", 3);
             if (parts.length == 3) {
                 resultStack.set(ModComponents.PARAMETRIC,
                     new ParametricComponent(parts[0].trim(), parts[1].trim(), parts[2].trim()));
             }
         } else {
+            resultStack.remove(ModComponents.PARAMETRIC);
             resultStack.set(ModComponents.FUNCTION,
                 new FunctionComponent(newItemName.trim()));
         }

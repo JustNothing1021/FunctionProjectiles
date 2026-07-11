@@ -15,11 +15,13 @@ import net.minecraft.entity.projectile.FishingBobberEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.projectile.TridentEntity;
+import net.minecraft.entity.projectile.WindChargeEntity;
 import net.minecraft.entity.projectile.thrown.ThrownItemEntity;
 import net.minecraft.item.BowItem;
 import net.minecraft.item.CrossbowItem;
 import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.WindChargeItem;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -190,6 +192,7 @@ public abstract class ProjectileEntityMixin {
         else if (self instanceof PersistentProjectileEntity ar) tryApplyArrow(ar);
         else if (self instanceof FishingBobberEntity fb) tryApplyBobber(fb);
         else if (self instanceof FireworkRocketEntity fr) tryApplyFirework(fr);
+        else if (self instanceof WindChargeEntity wc) tryApplyWindCharge(wc);
     }
 
     private void tryApplyThrown(ThrownItemEntity ti) {
@@ -222,6 +225,13 @@ public abstract class ProjectileEntityMixin {
         if (rocket.getOwner() instanceof PlayerEntity p) {
             for (ItemStack hs : new ItemStack[]{p.getMainHandStack(), p.getOffHandStack()})
                 if (hs.getItem() instanceof CrossbowItem && applyIfPresent(rocket, hs)) return;
+        }
+    }
+
+    private void tryApplyWindCharge(WindChargeEntity wc) {
+        if (wc.getOwner() instanceof PlayerEntity p) {
+            for (ItemStack hs : new ItemStack[]{p.getMainHandStack(), p.getOffHandStack()})
+                if (hs.getItem() instanceof WindChargeItem && applyIfPresent(wc, hs)) return;
         }
     }
 
