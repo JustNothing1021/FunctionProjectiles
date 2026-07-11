@@ -3,6 +3,7 @@ package com.justnothing.functionprojectiles;
 import com.justnothing.functionprojectiles.block.FunctionAnvilScreenHandler;
 import com.justnothing.functionprojectiles.block.ModBlocks;
 import com.justnothing.functionprojectiles.block.ModScreenHandlers;
+import com.justnothing.functionprojectiles.command.ModCommands;
 import com.justnothing.functionprojectiles.component.ModComponents;
 import com.justnothing.functionprojectiles.item.ModItemGroups;
 import com.justnothing.functionprojectiles.network.ModNetworking;
@@ -22,6 +23,7 @@ public class FunctionProjectilesMod implements ModInitializer {
         ModScreenHandlers.register();
         ModItemGroups.register();
         ModNetworking.register();
+        ModCommands.register();
 
         ServerPlayNetworking.registerGlobalReceiver(ModNetworking.FunctionAnvilUpdatePayload.ID,
             (payload, context) -> {

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.DoubleUnaryOperator;
 
 public class ExprParser {
@@ -36,6 +37,8 @@ public class ExprParser {
         FUNCTIONS.put("floor", Math::floor);
         FUNCTIONS.put("round", Math::round);
     }
+
+    private static final Set<String> COMPARISON_OPS = Set.of("<", ">", "<=", ">=", "==", "!=");
 
     private enum TokenType {
         NUMBER, IDENTIFIER, OPERATOR, LPAREN, RPAREN, COMMA, EOF
@@ -85,6 +88,24 @@ public class ExprParser {
                 pos++;
             } else if (ch == ',') {
                 tokens.add(new Token(TokenType.COMMA, ",", startPos));
+                pos++;
+            } else if (ch == '<' || ch == '>') {
+                // Check for <=, >=
+                if (pos + 1 < len && input.charAt(pos + 1) == '=') {
+                    tokens.add(new Token(TokenType.OPERATOR, input.substring(pos, pos + 2), startPos));
+                    pos += 2;
+                } else {
+                    tokens.add(new Token(TokenType.OPERATOR, String.valueOf(ch), startPos));
+                    pos++;
+                }
+            } else if (ch == '=' && pos + 1 < len && input.charAt(pos + 1) == '=') {
+                tokens.add(new Token(TokenType.OPERATOR, "==", startPos));
+                pos += 2;
+            } else if (ch == '!' && pos + 1 < len && input.charAt(pos + 1) == '=') {
+                tokens.add(new Token(TokenType.OPERATOR, "!=", startPos));
+                pos += 2;
+            } else if (ch == '?' || ch == ':') {
+                tokens.add(new Token(TokenType.OPERATOR, String.valueOf(ch), startPos));
                 pos++;
             } else if (isOperatorChar(ch)) {
                 tokens.add(new Token(TokenType.OPERATOR, String.valueOf(ch), startPos));
@@ -193,12 +214,14 @@ public class ExprParser {
             return true;
         }
         if (prev.type == TokenType.IDENTIFIER && curr.type == TokenType.LPAREN) {
-            return !FUNCTIONS.containsKey(prev.text);
+            return !FUNCTIONS.containsKey(prev.text) && !"rand".equals(prev.text);
         }
         return false;
     }
 
     // --- Parser ---
+    // Precedence (lowest to highest):
+    //   ternary ?:  → comparison → add/sub → mul/div → unary → power → primary
 
     private final List<Token> tokens;
     private final String variable;
@@ -221,7 +244,44 @@ public class ExprParser {
     }
 
     private Expression parseExpression(int depth) throws ExprParseException {
-        return parseAddSub(depth);
+        return parseTernary(depth);
+    }
+
+    private Expression parseTernary(int depth) throws ExprParseException {
+        checkDepth(depth);
+        Expression cond = parseComparison(depth + 1);
+
+        if (current().type == TokenType.OPERATOR && current().text.equals("?")) {
+            advance();
+            Expression trueExpr = parseTernary(depth + 1); // right-associative
+            expectOperator(":");
+            Expression falseExpr = parseTernary(depth + 1);
+            Expression c = cond, t = trueExpr, f = falseExpr;
+            return x -> c.evaluate(x) != 0 ? t.evaluate(x) : f.evaluate(x);
+        }
+        return cond;
+    }
+
+    private Expression parseComparison(int depth) throws ExprParseException {
+        checkDepth(depth);
+        Expression left = parseAddSub(depth + 1);
+
+        if (current().type == TokenType.OPERATOR && COMPARISON_OPS.contains(current().text)) {
+            String op = current().text;
+            advance();
+            Expression right = parseAddSub(depth + 1);
+            Expression l = left, r = right;
+            return switch (op) {
+                case "<"  -> x -> l.evaluate(x) < r.evaluate(x) ? 1.0 : 0.0;
+                case ">"  -> x -> l.evaluate(x) > r.evaluate(x) ? 1.0 : 0.0;
+                case "<=" -> x -> l.evaluate(x) <= r.evaluate(x) ? 1.0 : 0.0;
+                case ">=" -> x -> l.evaluate(x) >= r.evaluate(x) ? 1.0 : 0.0;
+                case "==" -> x -> l.evaluate(x) == r.evaluate(x) ? 1.0 : 0.0;
+                case "!=" -> x -> l.evaluate(x) != r.evaluate(x) ? 1.0 : 0.0;
+                default -> throw new ExprParseException("Unknown comparison operator '" + op + "'");
+            };
+        }
+        return left;
     }
 
     private Expression parseAddSub(int depth) throws ExprParseException {
@@ -313,6 +373,7 @@ public class ExprParser {
             int namePos = cur.position;
             advance();
 
+            // Built-in function call
             if (current().type == TokenType.LPAREN && FUNCTIONS.containsKey(name)) {
                 advance();
                 Expression arg = parseExpression(depth + 1);
@@ -321,12 +382,23 @@ public class ExprParser {
                 return x -> fn.applyAsDouble(arg.evaluate(x));
             }
 
+            // rand() or bare rand — random number [0, 1)
+            if ("rand".equals(name)) {
+                if (current().type == TokenType.LPAREN) {
+                    advance();
+                    expect(TokenType.RPAREN);
+                }
+                return x -> Math.random();
+            }
+
+            // Constants
             if (CONSTANTS.containsKey(name)) {
                 double value = CONSTANTS.get(name);
                 return x -> value;
             }
 
-            if (name.equals(variable)) {
+            // Variable (x or t) or alias 'dist'
+            if (name.equals(variable) || "dist".equals(name)) {
                 return x -> x;
             }
 
@@ -355,6 +427,13 @@ public class ExprParser {
                 default -> expected.name();
             };
             throw new ExprParseException("Expected " + expectedStr, current().position);
+        }
+        advance();
+    }
+
+    private void expectOperator(String op) throws ExprParseException {
+        if (current().type != TokenType.OPERATOR || !current().text.equals(op)) {
+            throw new ExprParseException("Expected '" + op + "'", current().position);
         }
         advance();
     }

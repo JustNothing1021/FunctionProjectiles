@@ -527,4 +527,142 @@ class ExprParserTest {
             assertTrue(Double.isInfinite(result) && result > 0, "2^100000 should be +Infinity");
         }
     }
+
+    // ---------------------------------------------------------------
+    //  16. Comparison operators
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("Comparison operators")
+    class ComparisonOperators {
+        @Test
+        void lessThan() throws ExprParseException {
+            assertEquals(1.0, eval("3 < 5"), DELTA);
+        }
+
+        @Test
+        void lessThanFalse() throws ExprParseException {
+            assertEquals(0.0, eval("5 < 3"), DELTA);
+        }
+
+        @Test
+        void greaterThan() throws ExprParseException {
+            assertEquals(1.0, eval("5 > 3"), DELTA);
+        }
+
+        @Test
+        void lessThanOrEqual() throws ExprParseException {
+            assertEquals(1.0, eval("3 <= 3"), DELTA);
+        }
+
+        @Test
+        void greaterThanOrEqual() throws ExprParseException {
+            assertEquals(1.0, eval("3 >= 3"), DELTA);
+        }
+
+        @Test
+        void equal() throws ExprParseException {
+            assertEquals(1.0, eval("3 == 3"), DELTA);
+        }
+
+        @Test
+        void notEqual() throws ExprParseException {
+            assertEquals(1.0, eval("3 != 4"), DELTA);
+        }
+
+        @Test
+        void comparisonWithVariable() throws ExprParseException {
+            // x < 5 at x=3 → 1.0
+            assertEquals(1.0, ExprParser.parse("x < 5").evaluate(3), DELTA);
+            // x < 5 at x=7 → 0.0
+            assertEquals(0.0, ExprParser.parse("x < 5").evaluate(7), DELTA);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    //  17. Ternary operator
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("Ternary operator")
+    class TernaryOperator {
+        @Test
+        void basicTernary() throws ExprParseException {
+            // 1 ? 2 : 3 → 2
+            assertEquals(2.0, eval("1 ? 2 : 3"), DELTA);
+        }
+
+        @Test
+        void falseTernary() throws ExprParseException {
+            // 0 ? 2 : 3 → 3
+            assertEquals(3.0, eval("0 ? 2 : 3"), DELTA);
+        }
+
+        @Test
+        void comparisonTernary() throws ExprParseException {
+            // x < 5 ? x : sin(x) at x=3 → 3
+            assertEquals(3.0, ExprParser.parse("x < 5 ? x : sin(x)").evaluate(3), DELTA);
+        }
+
+        @Test
+        void comparisonTernaryElse() throws ExprParseException {
+            // x < 5 ? x : sin(x) at x=7 → sin(7)
+            assertEquals(Math.sin(7), ExprParser.parse("x < 5 ? x : sin(x)").evaluate(7), DELTA);
+        }
+
+        @Test
+        void nestedTernary() throws ExprParseException {
+            // x < 0 ? -1 : (x > 0 ? 1 : 0) — sign function
+            assertEquals(-1.0, ExprParser.parse("x < 0 ? -1 : (x > 0 ? 1 : 0)").evaluate(-2), DELTA);
+            assertEquals(0.0, ExprParser.parse("x < 0 ? -1 : (x > 0 ? 1 : 0)").evaluate(0), DELTA);
+            assertEquals(1.0, ExprParser.parse("x < 0 ? -1 : (x > 0 ? 1 : 0)").evaluate(2), DELTA);
+        }
+
+        @Test
+        void ternaryPrecedenceBelowComparison() throws ExprParseException {
+            // 3 > 2 ? 10 : 20 → 10
+            assertEquals(10.0, eval("3 > 2 ? 10 : 20"), DELTA);
+        }
+
+        @Test
+        void ternaryPrecedenceBelowArithmetic() throws ExprParseException {
+            // 1 ? 2 + 3 : 4 → 5 (addition binds tighter than ternary)
+            assertEquals(5.0, eval("1 ? 2 + 3 : 4"), DELTA);
+        }
+    }
+
+    // ---------------------------------------------------------------
+    //  18. Dynamic variables: rand, dist
+    // ---------------------------------------------------------------
+    @Nested
+    @DisplayName("Dynamic variables: rand, dist")
+    class DynamicVariables {
+        @Test
+        void randReturnsValueBetweenZeroAndOne() throws ExprParseException {
+            double result = eval("rand");
+            assertTrue(result >= 0.0 && result < 1.0, "rand should be in [0, 1)");
+        }
+
+        @Test
+        void randWithParens() throws ExprParseException {
+            double result = eval("rand()");
+            assertTrue(result >= 0.0 && result < 1.0, "rand() should be in [0, 1)");
+        }
+
+        @Test
+        void distIsAliasForX() throws ExprParseException {
+            // dist should equal x in function mode
+            assertEquals(5.0, ExprParser.parse("dist").evaluate(5), DELTA);
+        }
+
+        @Test
+        void distInParametricMode() throws ExprParseException {
+            // dist should equal t in parametric mode
+            assertEquals(3.0, ExprParser.parseForT("dist").evaluate(3), DELTA);
+        }
+
+        @Test
+        void distInExpression() throws ExprParseException {
+            // dist * 2 should equal x * 2
+            assertEquals(10.0, ExprParser.parse("dist * 2").evaluate(5), DELTA);
+        }
+    }
 }

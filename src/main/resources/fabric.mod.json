@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "function-projectiles",
-  "version": "${version}",
+  "version": "1.0.0",
   "name": "Function Projectiles",
   "description": "Add mathematical expression trajectories to projectiles!",
   "authors": ["JustNothing"],
