@@ -16,3 +16,6 @@ out/
 # Fabric
 run/
 runs/
+
+# Report
+report/
