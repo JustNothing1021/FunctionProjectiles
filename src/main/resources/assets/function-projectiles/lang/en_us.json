@@ -1,0 +1,13 @@
+{
+  "block.function-projectiles.function_anvil": "Function Anvil",
+  "item.function-projectiles.function_anvil": "Function Anvil",
+  "container.function-projectiles.function_anvil": "Function Anvil",
+  "itemGroup.function-projectiles": "Function Projectiles",
+  "function-projectiles.mode.function": "f(x) Mode",
+  "function-projectiles.mode.parametric": "Parametric Mode",
+  "function-projectiles.tooltip.expression": "§7f(x) = §f%s",
+  "function-projectiles.tooltip.parametric": "§7x(t)=§f%s §7y(t)=§f%s §7z(t)=§f%s",
+  "function-projectiles.error.parse": "§cInvalid expression: %s",
+  "function-projectiles.error.nan": "§cExpression resulted in NaN!",
+  "function-projectiles.error.infinity": "§cExpression resulted in Infinity!"
+}

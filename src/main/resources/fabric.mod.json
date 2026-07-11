@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "function-projectiles",
+  "version": "${version}",
+  "name": "Function Projectiles",
+  "description": "Add mathematical expression trajectories to projectiles!",
+  "authors": ["JustNothing"],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/function-projectiles/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.justnothing.functionprojectiles.FunctionProjectilesMod"
+    ],
+    "client": [
+      "com.justnothing.functionprojectiles.FunctionProjectilesModClient"
+    ]
+  },
+  "mixins": [
+    "function-projectiles.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

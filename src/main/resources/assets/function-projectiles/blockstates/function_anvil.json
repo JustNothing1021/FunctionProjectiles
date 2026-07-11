@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "function-projectiles:block/function_anvil" },
+    "facing=east":  { "model": "function-projectiles:block/function_anvil", "y": 90 },
+    "facing=south": { "model": "function-projectiles:block/function_anvil", "y": 180 },
+    "facing=west":  { "model": "function-projectiles:block/function_anvil", "y": 270 }
+  }
+}

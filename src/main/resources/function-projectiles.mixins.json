@@ -1,0 +1,18 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.justnothing.functionprojectiles.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "BlockItemMixin",
+    "EntityFieldsAccessor",
+    "FireworkRocketEntityAccessor",
+    "ProjectileEntityMixin",
+    "ThrownItemEntityAccessor",
+    "TntBlockMixin",
+    "TntEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
