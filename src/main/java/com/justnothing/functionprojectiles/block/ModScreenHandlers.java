@@ -14,7 +14,7 @@ public class ModScreenHandlers {
 
     public static void register() {
         Registry.register(Registries.SCREEN_HANDLER,
-            Identifier.of(FunctionProjectilesMod.MOD_ID, "function_anvil"),
+            new Identifier(FunctionProjectilesMod.MOD_ID, "function_anvil"),
             FUNCTION_ANVIL);
     }
 }

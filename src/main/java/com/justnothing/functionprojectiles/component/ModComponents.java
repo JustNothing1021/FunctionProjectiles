@@ -1,29 +1,42 @@
 package com.justnothing.functionprojectiles.component;
 
-import com.justnothing.functionprojectiles.FunctionProjectilesMod;
-import net.minecraft.component.ComponentType;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.util.Identifier;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 
 public class ModComponents {
-    public static final ComponentType<FunctionComponent> FUNCTION =
-        Registry.register(Registries.DATA_COMPONENT_TYPE,
-            Identifier.of(FunctionProjectilesMod.MOD_ID, "function"),
-            ComponentType.<FunctionComponent>builder()
-                .codec(FunctionComponent.CODEC)
-                .build()
-        );
 
-    public static final ComponentType<ParametricComponent> PARAMETRIC =
-        Registry.register(Registries.DATA_COMPONENT_TYPE,
-            Identifier.of(FunctionProjectilesMod.MOD_ID, "parametric"),
-            ComponentType.<ParametricComponent>builder()
-                .codec(ParametricComponent.CODEC)
-                .build()
-        );
+    private static final String FP_KEY = "fp_data";
 
-    public static void register() {
-        // Registration happens via class loading
+    public static void register() {}
+
+    public static FunctionComponent getFunction(ItemStack stack) {
+        NbtCompound nbt = stack.getNbt();
+        if (nbt == null || !nbt.contains(FP_KEY)) return null;
+        String[] parts = nbt.getString(FP_KEY).split("\\|");
+        if (parts.length != 2 || !"f".equals(parts[0])) return null;
+        return new FunctionComponent(parts[1]);
+    }
+
+    public static void setFunction(ItemStack stack, String expression) {
+        NbtCompound nbt = stack.getOrCreateNbt();
+        nbt.putString(FP_KEY, "f|" + expression);
+    }
+
+    public static ParametricComponent getParametric(ItemStack stack) {
+        NbtCompound nbt = stack.getNbt();
+        if (nbt == null || !nbt.contains(FP_KEY)) return null;
+        String[] parts = nbt.getString(FP_KEY).split("\\|", 4);
+        if (parts.length != 4 || !"p".equals(parts[0])) return null;
+        return new ParametricComponent(parts[1], parts[2], parts[3]);
+    }
+
+    public static void setParametric(ItemStack stack, String x, String y, String z) {
+        NbtCompound nbt = stack.getOrCreateNbt();
+        nbt.putString(FP_KEY, "p|" + x + "|" + y + "|" + z);
+    }
+
+    public static boolean hasComponent(ItemStack stack) {
+        NbtCompound nbt = stack.getNbt();
+        return nbt != null && nbt.contains(FP_KEY);
     }
 }

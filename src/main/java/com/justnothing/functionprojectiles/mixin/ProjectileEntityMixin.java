@@ -127,6 +127,11 @@ public abstract class ProjectileEntityMixin {
                 return true;
             }
         }
+        if (self instanceof PersistentProjectileEntity arrow
+            && ((PersistentProjectileAccessor) arrow).getInGround()) {
+            released.add(self.getUuid());
+            return true;
+        }
         if (self instanceof FishingBobberEntity) {
             if (self.isTouchingWater()) {
                 released.add(self.getUuid());
@@ -195,7 +200,6 @@ public abstract class ProjectileEntityMixin {
     }
 
     private void tryApplyArrow(PersistentProjectileEntity arrow) {
-        if (applyIfPresent(arrow, arrow.getItemStack())) return;
         if (arrow.getOwner() instanceof PlayerEntity p) {
             for (ItemStack hs : new ItemStack[]{p.getMainHandStack(), p.getOffHandStack()})
                 if ((hs.getItem() instanceof BowItem || hs.getItem() instanceof CrossbowItem) && applyIfPresent(arrow, hs)) return;
@@ -221,14 +225,14 @@ public abstract class ProjectileEntityMixin {
     }
 
     private boolean applyIfPresent(ProjectileEntity self, ItemStack stack) {
-        FunctionComponent fc = stack.get(ModComponents.FUNCTION);
+        FunctionComponent fc = ModComponents.getFunction(stack);
         if (fc != null) {
             double speed = resolveSpeed(self);
             FunctionProjectilesMod.LOGGER.info("Trajectory applied: expr={}, speed={}", fc.expression(), String.format("%.2f", speed));
             TrajectoryHelper.applyFunction(self, fc, speed);
             return true;
         }
-        ParametricComponent pc = stack.get(ModComponents.PARAMETRIC);
+        ParametricComponent pc = ModComponents.getParametric(stack);
         if (pc != null) {
             double speed = resolveSpeed(self);
             FunctionProjectilesMod.LOGGER.info("Parametric applied: speed={}", String.format("%.2f", speed));

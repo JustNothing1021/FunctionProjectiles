@@ -4,9 +4,8 @@ import com.justnothing.functionprojectiles.component.FunctionComponent;
 import com.justnothing.functionprojectiles.component.ModComponents;
 import com.justnothing.functionprojectiles.component.ParametricComponent;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
-import net.minecraft.item.Item;
+import net.minecraft.client.item.TooltipContext;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.text.Text;
 
 import java.util.List;
@@ -14,8 +13,8 @@ import java.util.List;
 public class TooltipHandler implements ItemTooltipCallback {
 
     @Override
-    public void getTooltip(ItemStack stack, Item.TooltipContext context, TooltipType type, List<Text> lines) {
-        FunctionComponent funcComp = stack.get(ModComponents.FUNCTION);
+    public void getTooltip(ItemStack stack, TooltipContext context, List<Text> lines) {
+        FunctionComponent funcComp = ModComponents.getFunction(stack);
         if (funcComp != null) {
             lines.add(Text.translatable(
                 "function-projectiles.tooltip.expression",
@@ -24,7 +23,7 @@ public class TooltipHandler implements ItemTooltipCallback {
             return;
         }
 
-        ParametricComponent paramComp = stack.get(ModComponents.PARAMETRIC);
+        ParametricComponent paramComp = ModComponents.getParametric(stack);
         if (paramComp != null) {
             lines.add(Text.translatable(
                 "function-projectiles.tooltip.parametric",

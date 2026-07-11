@@ -5,9 +5,13 @@
   "itemGroup.function-projectiles": "函数弹射物",
   "function-projectiles.mode.function": "f(x) 模式",
   "function-projectiles.mode.parametric": "参数方程模式",
+  "function-projectiles.craft": "合成",
+  "function-projectiles.expression": "表达式",
   "function-projectiles.tooltip.expression": "§7f(x) = §f%s",
   "function-projectiles.tooltip.parametric": "§7x(t)=§f%s §7y(t)=§f%s §7z(t)=§f%s",
   "function-projectiles.error.parse": "§c无效表达式: %s",
   "function-projectiles.error.nan": "§c表达式结果为 NaN!",
-  "function-projectiles.error.infinity": "§c表达式结果为 Infinity!"
+  "function-projectiles.error.infinity": "§c表达式结果为 Infinity!",
+  "function-projectiles.placeholder.function": "输入 f(x) 表达式...",
+  "function-projectiles.placeholder.parametric": "输入 x(t)|y(t)|z(t) 表达式..."
 }

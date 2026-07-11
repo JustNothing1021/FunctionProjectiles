@@ -24,8 +24,8 @@ public class BlockItemMixin {
         if (!(stack.getItem() instanceof BlockItem bi)) return;
         if (!(bi.getBlock() instanceof TntBlock)) return;
 
-        var funcComp = stack.get(ModComponents.FUNCTION);
-        var paramComp = stack.get(ModComponents.PARAMETRIC);
+        var funcComp = ModComponents.getFunction(stack);
+        var paramComp = ModComponents.getParametric(stack);
         if (funcComp == null && paramComp == null) return;
 
         PlayerEntity player = context.getPlayer();

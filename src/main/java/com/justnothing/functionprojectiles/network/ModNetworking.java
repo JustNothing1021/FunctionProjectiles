@@ -1,42 +1,34 @@
 package com.justnothing.functionprojectiles.network;
 
-import com.justnothing.functionprojectiles.FunctionProjectilesMod;
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 
 public class ModNetworking {
 
-    public static final CustomPayload.Id<FunctionAnvilUpdatePayload> FUNCTION_ANVIL_UPDATE =
-        new CustomPayload.Id<>(Identifier.of(FunctionProjectilesMod.MOD_ID, "function_anvil_update"));
+    public static final Identifier FUNCTION_ANVIL_UPDATE = new Identifier("function-projectiles", "anvil_update");
+    public static final Identifier FUNCTION_ANVIL_CRAFT = new Identifier("function-projectiles", "anvil_craft");
 
     public static void register() {
-        PayloadTypeRegistry.playC2S().register(
-            FunctionAnvilUpdatePayload.ID,
-            FunctionAnvilUpdatePayload.CODEC
-        );
     }
 
-    public record FunctionAnvilUpdatePayload(
-        String expression,
-        String mode
-    ) implements CustomPayload {
+    public static void sendAnvilUpdate(String mode, String expression) {
+        // Called from client screen - just sent via ClientPlayNetworking in the client handler
+    }
 
-        public static final CustomPayload.Id<FunctionAnvilUpdatePayload> ID = FUNCTION_ANVIL_UPDATE;
+    public static String readMode(PacketByteBuf buf) {
+        return buf.readString();
+    }
 
-        public static final PacketCodec<RegistryByteBuf, FunctionAnvilUpdatePayload> CODEC =
-            PacketCodec.tuple(
-                PacketCodecs.STRING, FunctionAnvilUpdatePayload::expression,
-                PacketCodecs.STRING, FunctionAnvilUpdatePayload::mode,
-                FunctionAnvilUpdatePayload::new
-            );
+    public static String readExpression(PacketByteBuf buf) {
+        return buf.readString();
+    }
 
-        @Override
-        public Id<? extends CustomPayload> getId() {
-            return ID;
-        }
+    public static PacketByteBuf createAnvilPacket(String mode, String expression) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeString(mode);
+        buf.writeString(expression);
+        return buf;
     }
 }
