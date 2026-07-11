@@ -1,8 +1,7 @@
 {
-  "parent": "minecraft:block/anvil",
+  "parent": "minecraft:block/template_anvil",
   "textures": {
     "top": "minecraft:block/anvil_top",
-    "body": "minecraft:block/anvil",
-    "0": "minecraft:block/anvil"
+    "body": "minecraft:block/anvil"
   }
 }

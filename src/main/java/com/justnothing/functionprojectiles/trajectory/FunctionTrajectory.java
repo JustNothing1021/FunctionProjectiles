@@ -6,9 +6,9 @@ import com.justnothing.functionprojectiles.expression.ExprParseException;
 import com.justnothing.functionprojectiles.expression.ExprParser;
 import com.justnothing.functionprojectiles.expression.Expression;
 import com.justnothing.functionprojectiles.expression.ParametricExpression;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.projectile.ProjectileEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.projectile.Projectile;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,10 +29,10 @@ public class FunctionTrajectory {
         Mode mode,
         Expression expression,           // for f(x) mode
         ParametricExpression parametric, // for parametric mode
-        Vec3d origin,                    // spawn position
-        Vec3d forward,                   // player's horizontal view direction (normalized)
-        Vec3d up,                        // MC y-axis (0,1,0)
-        Vec3d right,                     // cross product forward x up
+        Vec3 origin,                     // spawn position
+        Vec3 forward,                    // player's horizontal view direction (normalized)
+        Vec3 up,                         // MC y-axis (0,1,0)
+        Vec3 right,                      // cross product forward x up
         double speed,                    // projectile speed
         double currentParam              // current x or t value
     ) {}
@@ -60,15 +60,15 @@ public class FunctionTrajectory {
      * Call this when a projectile is spawned.
      */
     public static TrajectoryData createFromFunction(
-            FunctionComponent component, ProjectileEntity projectile) {
-        return createFromFunction(component, projectile, projectile.getVelocity().length());
+            FunctionComponent component, Projectile projectile) {
+        return createFromFunction(component, projectile, projectile.getDeltaMovement().length());
     }
 
     public static TrajectoryData createFromFunction(
-            FunctionComponent component, ProjectileEntity projectile, double speed) {
+            FunctionComponent component, Projectile projectile, double speed) {
         try {
             Expression expr = ExprParser.parse(component.expression());
-            Vec3d origin = projectile.getPos();
+            Vec3 origin = getOwnerEyePos(projectile);
             CoordinateFrame frame = buildCoordinateFrame(projectile);
             return new TrajectoryData(Mode.FUNCTION, expr, null,
                 origin, frame.forward(), frame.up(), frame.right(), speed, 0);
@@ -78,18 +78,18 @@ public class FunctionTrajectory {
     }
 
     public static TrajectoryData createFromParametric(
-            ParametricComponent component, ProjectileEntity projectile) {
-        return createFromParametric(component, projectile, projectile.getVelocity().length());
+            ParametricComponent component, Projectile projectile) {
+        return createFromParametric(component, projectile, projectile.getDeltaMovement().length());
     }
 
     public static TrajectoryData createFromParametric(
-            ParametricComponent component, ProjectileEntity projectile, double speed) {
+            ParametricComponent component, Projectile projectile, double speed) {
         try {
             Expression exprX = ExprParser.parseForT(component.expressionX());
             Expression exprY = ExprParser.parseForT(component.expressionY());
             Expression exprZ = ExprParser.parseForT(component.expressionZ());
             ParametricExpression parametric = new ParametricExpression(exprX, exprY, exprZ);
-            Vec3d origin = projectile.getPos();
+            Vec3 origin = getOwnerEyePos(projectile);
             CoordinateFrame frame = buildCoordinateFrame(projectile);
             return new TrajectoryData(Mode.PARAMETRIC, null, parametric,
                 origin, frame.forward(), frame.up(), frame.right(), speed, 0);
@@ -98,8 +98,17 @@ public class FunctionTrajectory {
         }
     }
 
+    /** Use the owner's eye position as origin so the trajectory starts from the view point. */
+    private static Vec3 getOwnerEyePos(Projectile projectile) {
+        Entity owner = projectile.getOwner();
+        if (owner != null) {
+            return owner.getEyePosition();
+        }
+        return projectile.position();
+    }
+
     /** Full 3D right-handed coordinate frame. */
-    public record CoordinateFrame(Vec3d forward, Vec3d up, Vec3d right) {}
+    public record CoordinateFrame(Vec3 forward, Vec3 up, Vec3 right) {}
 
     /**
      * Builds a right-handed 3D coordinate frame from the projectile's velocity.
@@ -107,49 +116,49 @@ public class FunctionTrajectory {
      * y = velocity rotated 90° CCW in the vertical plane (spanned by velocity and world-up)
      * z = x × y
      */
-    private static CoordinateFrame buildCoordinateFrame(ProjectileEntity projectile) {
-        Vec3d forward;
+    private static CoordinateFrame buildCoordinateFrame(Projectile projectile) {
+        Vec3 forward;
         Entity owner = projectile.getOwner();
 
         if (owner != null) {
             // Pure throw direction = projectile velocity minus owner's movement
-            Vec3d throwDir = projectile.getVelocity().subtract(owner.getVelocity());
-            if (throwDir.lengthSquared() > 1e-6) {
+            Vec3 throwDir = projectile.getDeltaMovement().subtract(owner.getDeltaMovement());
+            if (throwDir.lengthSqr() > 1e-6) {
                 forward = throwDir.normalize();
             } else {
-                float y = owner.getYaw(), p = owner.getPitch();
+                float y = owner.getYRot(), p = owner.getXRot();
                 double yr = y * Math.PI / 180, pr = p * Math.PI / 180;
-                forward = new Vec3d(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr));
+                forward = new Vec3(-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr));
             }
         } else {
-            Vec3d vel = projectile.getVelocity();
-            if (vel.lengthSquared() > 1e-6) {
+            Vec3 vel = projectile.getDeltaMovement();
+            if (vel.lengthSqr() > 1e-6) {
                 forward = vel.normalize();
             } else {
-                forward = new Vec3d(0, 0, 1);
+                forward = new Vec3(0, 0, 1);
             }
         }
 
-        Vec3d worldUp = new Vec3d(0, 1, 0);
-        Vec3d n = forward.crossProduct(worldUp);
+        Vec3 worldUp = new Vec3(0, 1, 0);
+        Vec3 n = forward.cross(worldUp);
 
-        Vec3d up;
-        if (n.lengthSquared() < 1e-6) {
-            float yaw = owner != null ? owner.getYaw() : 0;
+        Vec3 up;
+        if (n.lengthSqr() < 1e-6) {
+            float yaw = owner != null ? owner.getYRot() : 0;
             double r = yaw * Math.PI / 180;
-            Vec3d href = new Vec3d(-Math.sin(r), 0, Math.cos(r));
-            up = forward.crossProduct(href.crossProduct(forward)).normalize();
+            Vec3 href = new Vec3(-Math.sin(r), 0, Math.cos(r));
+            up = forward.cross(href.cross(forward)).normalize();
         } else {
-            up = n.crossProduct(forward).normalize();
+            up = n.cross(forward).normalize();
         }
 
-        return new CoordinateFrame(forward, up, forward.crossProduct(up));
+        return new CoordinateFrame(forward, up, forward.cross(up));
     }
 
     /**
      * Compute the next position for a projectile with a function trajectory.
      * Returns null if the expression evaluates to NaN (destroy projectile),
-     * or a Vec3d with a special marker for Infinity (vertical movement).
+     * or a Vec3 with a special marker for Infinity (vertical movement).
      */
     private static final double MAX_SPEED_MULTIPLIER = 10.0;
     private static final double MAX_Y_CHANGE_PER_TICK = 4.0;
@@ -178,8 +187,8 @@ public class FunctionTrajectory {
                 }
             }
 
-            Vec3d localPos = new Vec3d(newParam, y, 0);
-            Vec3d worldPos = localToWorld(localPos, data);
+            Vec3 localPos = new Vec3(newParam, y, 0);
+            Vec3 worldPos = localToWorld(localPos, data);
             if (!isInBounds(worldPos)) return TrajectoryResult.nan();
             return TrajectoryResult.position(worldPos, newParam);
 
@@ -190,8 +199,8 @@ public class FunctionTrajectory {
                 return tryLookaheadParametric(data, newParam, dt, point);
             }
 
-            Vec3d localPos = new Vec3d(point.x(), point.y(), point.z());
-            Vec3d worldPos = localToWorld(localPos, data);
+            Vec3 localPos = new Vec3(point.x(), point.y(), point.z());
+            Vec3 worldPos = localToWorld(localPos, data);
             if (!isInBounds(worldPos)) return TrajectoryResult.nan();
             return TrajectoryResult.position(worldPos, newParam);
         }
@@ -201,7 +210,7 @@ public class FunctionTrajectory {
         return Double.isNaN(value) || Double.isInfinite(value);
     }
 
-    private static boolean isInBounds(Vec3d pos) {
+    private static boolean isInBounds(Vec3 pos) {
         return Math.abs(pos.x) <= MAX_COORD
             && Math.abs(pos.y) <= MAX_COORD
             && Math.abs(pos.z) <= MAX_COORD;
@@ -214,8 +223,8 @@ public class FunctionTrajectory {
             double lookParam = currentParam + dt * i;
             double y = data.expression().evaluate(lookParam);
             if (!isInvalid(y)) {
-                Vec3d localPos = new Vec3d(lookParam, y, 0);
-                Vec3d worldPos = localToWorld(localPos, data);
+                Vec3 localPos = new Vec3(lookParam, y, 0);
+                Vec3 worldPos = localToWorld(localPos, data);
                 if (isInBounds(worldPos)) return TrajectoryResult.position(worldPos, lookParam);
             }
         }
@@ -230,8 +239,8 @@ public class FunctionTrajectory {
             double lookParam = currentParam + dt * i;
             ParametricExpression.Point point = data.parametric().evaluate(lookParam);
             if (!isInvalid(point.x()) && !isInvalid(point.y()) && !isInvalid(point.z())) {
-                Vec3d localPos = new Vec3d(point.x(), point.y(), point.z());
-                Vec3d worldPos = localToWorld(localPos, data);
+                Vec3 localPos = new Vec3(point.x(), point.y(), point.z());
+                Vec3 worldPos = localToWorld(localPos, data);
                 if (isInBounds(worldPos)) return TrajectoryResult.position(worldPos, lookParam);
             }
         }
@@ -247,11 +256,11 @@ public class FunctionTrajectory {
      * Transform local coordinates to world coordinates.
      * Local: x = forward direction, y = up direction, z = right direction
      */
-    public static Vec3d localToWorld(Vec3d local, TrajectoryData data) {
+    public static Vec3 localToWorld(Vec3 local, TrajectoryData data) {
         return data.origin().add(
-            data.forward().multiply(local.x)
-                .add(data.up().multiply(local.y))
-                .add(data.right().multiply(local.z))
+            data.forward().scale(local.x)
+                .add(data.up().scale(local.y))
+                .add(data.right().scale(local.z))
         );
     }
 
@@ -259,16 +268,16 @@ public class FunctionTrajectory {
         public enum Type { POSITION, NAN, INFINITE_UP, INFINITE_DOWN }
 
         private final Type type;
-        private final Vec3d position;
+        private final Vec3 position;
         private final double newParam;
 
-        private TrajectoryResult(Type type, Vec3d position, double newParam) {
+        private TrajectoryResult(Type type, Vec3 position, double newParam) {
             this.type = type;
             this.position = position;
             this.newParam = newParam;
         }
 
-        public static TrajectoryResult position(Vec3d pos, double newParam) {
+        public static TrajectoryResult position(Vec3 pos, double newParam) {
             return new TrajectoryResult(Type.POSITION, pos, newParam);
         }
 
@@ -281,7 +290,7 @@ public class FunctionTrajectory {
         }
 
         public Type getType() { return type; }
-        public Vec3d getPosition() { return position; }
+        public Vec3 getPosition() { return position; }
         public double getNewParam() { return newParam; }
     }
 }

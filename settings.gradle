@@ -4,10 +4,9 @@ pluginManagement {
             name = 'Fabric'
             url = 'https://maven.fabricmc.net/'
         }
-        maven {
-            name = 'Aliyun Gradle Plugins'
-            url = 'https://maven.aliyun.com/repository/gradle-plugin'
-        }
+        mavenCentral()
         gradlePluginPortal()
     }
 }
+
+rootProject.name = 'function-projectiles'

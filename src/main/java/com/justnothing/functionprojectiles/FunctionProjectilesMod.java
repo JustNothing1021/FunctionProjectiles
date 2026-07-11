@@ -25,9 +25,9 @@ public class FunctionProjectilesMod implements ModInitializer {
         ModNetworking.register();
         ModCommands.register();
 
-        ServerPlayNetworking.registerGlobalReceiver(ModNetworking.FunctionAnvilUpdatePayload.ID,
+        ServerPlayNetworking.registerGlobalReceiver(ModNetworking.FunctionAnvilUpdatePayload.TYPE,
             (payload, context) -> {
-                if (context.player().currentScreenHandler instanceof FunctionAnvilScreenHandler handler) {
+                if (context.player().containerMenu instanceof FunctionAnvilScreenHandler handler) {
                     handler.setMode(payload.mode());
                     handler.setNewItemName(payload.expression());
                 }

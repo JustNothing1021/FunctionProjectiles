@@ -1,39 +1,40 @@
 package com.justnothing.functionprojectiles.block;
 
-import net.minecraft.block.AnvilBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.screen.NamedScreenHandlerFactory;
-import net.minecraft.screen.ScreenHandlerContext;
-import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.AnvilBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 public class FunctionAnvilBlock extends AnvilBlock {
 
-    public FunctionAnvilBlock(Settings settings) {
-        super(settings);
+    public FunctionAnvilBlock(BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected ActionResult onUse(BlockState state, World world, BlockPos pos,
-                                 PlayerEntity player, BlockHitResult hit) {
-        if (world.isClient) {
-            return ActionResult.SUCCESS;
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+                                    Player player, BlockHitResult hit) {
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
         }
-        player.openHandledScreen(createScreenHandlerFactory(state, pos));
-        return ActionResult.CONSUME;
+        player.openMenu(createMenuProvider(state, pos));
+        return InteractionResult.CONSUME;
     }
 
-    private NamedScreenHandlerFactory createScreenHandlerFactory(BlockState state, BlockPos pos) {
-        return new SimpleNamedScreenHandlerFactory(
-            (syncId, inventory, player) ->
-                new FunctionAnvilScreenHandler(syncId, inventory,
-                    ScreenHandlerContext.create(player.getWorld(), pos)),
-            Text.translatable("container.function-projectiles.function_anvil")
+    private MenuProvider createMenuProvider(BlockState state, BlockPos pos) {
+        return new SimpleMenuProvider(
+            (id, inventory, player) ->
+                new FunctionAnvilScreenHandler(id, inventory,
+                    ContainerLevelAccess.create(player.level(), pos)),
+            Component.translatable("container.function-projectiles.function_anvil")
         );
     }
 }

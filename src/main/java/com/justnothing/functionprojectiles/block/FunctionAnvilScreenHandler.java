@@ -5,16 +5,16 @@ import com.justnothing.functionprojectiles.component.ModComponents;
 import com.justnothing.functionprojectiles.component.ParametricComponent;
 import com.justnothing.functionprojectiles.expression.ExprParseException;
 import com.justnothing.functionprojectiles.expression.ExprParser;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ScreenHandlerContext;
-import net.minecraft.screen.Property;
-import net.minecraft.screen.slot.Slot;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
-public class FunctionAnvilScreenHandler extends ScreenHandler {
+public class FunctionAnvilScreenHandler extends AbstractContainerMenu {
 
     private static final int EXP_COST = 3;
     private static final int INPUT_SLOT_INDEX = 0;
@@ -22,40 +22,46 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
     private static final int PLAYER_INVENTORY_START = 2;
     private static final int PLAYER_INVENTORY_END = 38;
 
-    private final SimpleInventory input = new SimpleInventory(1);
-    private final SimpleInventory output = new SimpleInventory(1);
-    private final ScreenHandlerContext context;
-    private final Property levelCost = Property.create();
+    private final SimpleContainer input = new SimpleContainer(1) {
+        @Override
+        public void setChanged() {
+            super.setChanged();
+            updateResult();
+        }
+    };
+    private final SimpleContainer output = new SimpleContainer(1);
+    private final ContainerLevelAccess context;
+    private final DataSlot levelCost = DataSlot.standalone();
     private String newItemName = "";
     private String mode = "function";
 
-    public FunctionAnvilScreenHandler(int syncId, PlayerInventory inventory) {
-        this(syncId, inventory, ScreenHandlerContext.EMPTY);
+    public FunctionAnvilScreenHandler(int id, Inventory inventory) {
+        this(id, inventory, ContainerLevelAccess.NULL);
     }
 
-    public FunctionAnvilScreenHandler(int syncId, PlayerInventory inventory, ScreenHandlerContext context) {
-        super(ModScreenHandlers.FUNCTION_ANVIL, syncId);
+    public FunctionAnvilScreenHandler(int id, Inventory inventory, ContainerLevelAccess context) {
+        super(ModScreenHandlers.FUNCTION_ANVIL, id);
         this.context = context;
-        this.addProperty(levelCost);
+        this.addDataSlot(levelCost);
 
         // Input slot - left slot position of the vanilla anvil texture
         this.addSlot(new Slot(input, INPUT_SLOT_INDEX, 27, 47));
 
         // Output slot - standard anvil output position
-        // Note: inventory index is 0 (not OUTPUT_SLOT_INDEX) because SimpleInventory only has 1 slot
+        // Note: inventory index is 0 (not OUTPUT_SLOT_INDEX) because SimpleContainer only has 1 slot
         this.addSlot(new Slot(output, 0, 134, 47) {
             @Override
-            public boolean canInsert(ItemStack stack) {
+            public boolean mayPlace(ItemStack stack) {
                 return false;
             }
 
             @Override
-            public boolean canTakeItems(PlayerEntity playerEntity) {
+            public boolean mayPickup(Player playerEntity) {
                 return canTakeOutput(playerEntity);
             }
 
             @Override
-            public void onTakeItem(PlayerEntity player, ItemStack stack) {
+            public void onTake(Player player, ItemStack stack) {
                 onTakeOutput(player, stack);
             }
         });
@@ -72,7 +78,6 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
             this.addSlot(new Slot(inventory, col, 8 + col * 18, 142));
         }
 
-        input.addListener(inv -> updateResult());
     }
 
     public String getMode() {
@@ -94,40 +99,40 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
     }
 
     @Override
-    public boolean canUse(PlayerEntity player) {
+    public boolean stillValid(Player player) {
         return true;
     }
 
     @Override
-    public ItemStack quickMove(PlayerEntity player, int slotIndex) {
+    public ItemStack quickMoveStack(Player player, int slotIndex) {
         ItemStack result = ItemStack.EMPTY;
         Slot slot = this.slots.get(slotIndex);
 
-        if (slot != null && slot.hasStack()) {
-            ItemStack slotStack = slot.getStack();
+        if (slot != null && slot.hasItem()) {
+            ItemStack slotStack = slot.getItem();
             result = slotStack.copy();
 
             if (slotIndex == INPUT_SLOT_INDEX) {
-                if (!this.insertItem(slotStack, PLAYER_INVENTORY_START, PLAYER_INVENTORY_END, false)) {
+                if (!this.moveItemStackTo(slotStack, PLAYER_INVENTORY_START, PLAYER_INVENTORY_END, false)) {
                     return ItemStack.EMPTY;
                 }
             } else if (slotIndex == OUTPUT_SLOT_INDEX) {
-            if (!this.insertItem(slotStack, PLAYER_INVENTORY_START, PLAYER_INVENTORY_END, true)) {
+            if (!this.moveItemStackTo(slotStack, PLAYER_INVENTORY_START, PLAYER_INVENTORY_END, true)) {
                 return ItemStack.EMPTY;
             }
             if (slotStack.isEmpty()) {
                 onTakeOutput(player, result);
             }
         } else {
-                if (!this.insertItem(slotStack, INPUT_SLOT_INDEX, OUTPUT_SLOT_INDEX, false)) {
+                if (!this.moveItemStackTo(slotStack, INPUT_SLOT_INDEX, OUTPUT_SLOT_INDEX, false)) {
                     return ItemStack.EMPTY;
                 }
             }
 
             if (slotStack.isEmpty()) {
-                slot.setStack(ItemStack.EMPTY);
+                slot.set(ItemStack.EMPTY);
             } else {
-                slot.markDirty();
+                slot.setChanged();
             }
         }
 
@@ -135,30 +140,30 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
     }
 
     @Override
-    public void onClosed(PlayerEntity player) {
-        super.onClosed(player);
-        context.run((world, pos) -> {
-            for (int i = 0; i < input.size(); ++i) {
-                ItemStack stack = input.getStack(i);
+    public void removed(Player player) {
+        super.removed(player);
+        context.execute((level, pos) -> {
+            for (int i = 0; i < input.getContainerSize(); ++i) {
+                ItemStack stack = input.getItem(i);
                 if (!stack.isEmpty()) {
-                    player.getInventory().offerOrDrop(stack);
+                    player.getInventory().add(stack);
                 }
             }
         });
-        input.clear();
-        output.clear();
+        input.clearContent();
+        output.clearContent();
     }
 
     public void updateResult() {
-        ItemStack inputStack = input.getStack(0);
+        ItemStack inputStack = input.getItem(0);
         if (inputStack.isEmpty()) {
-            output.setStack(0, ItemStack.EMPTY);
+            output.setItem(0, ItemStack.EMPTY);
             levelCost.set(0);
             return;
         }
 
         if (newItemName == null || newItemName.isBlank()) {
-            output.setStack(0, ItemStack.EMPTY);
+            output.setItem(0, ItemStack.EMPTY);
             levelCost.set(0);
             return;
         }
@@ -171,7 +176,7 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
         }
 
         if (!valid) {
-            output.setStack(0, ItemStack.EMPTY);
+            output.setItem(0, ItemStack.EMPTY);
             levelCost.set(0);
             return;
         }
@@ -191,22 +196,22 @@ public class FunctionAnvilScreenHandler extends ScreenHandler {
                 new FunctionComponent(newItemName.trim()));
         }
 
-        output.setStack(0, resultStack);
+        output.setItem(0, resultStack);
         levelCost.set(EXP_COST);
     }
 
-    private boolean canTakeOutput(PlayerEntity player) {
-        return player.getAbilities().creativeMode
+    private boolean canTakeOutput(Player player) {
+        return player.getAbilities().instabuild
             || (player.experienceLevel >= EXP_COST && levelCost.get() > 0);
     }
 
-    private void onTakeOutput(PlayerEntity player, ItemStack stack) {
-        if (!player.getAbilities().creativeMode) {
-            player.addExperienceLevels(-EXP_COST);
+    private void onTakeOutput(Player player, ItemStack stack) {
+        if (!player.getAbilities().instabuild) {
+            player.giveExperienceLevels(-EXP_COST);
         }
-        input.getStack(0).decrement(stack.getCount());
+        input.getItem(0).shrink(stack.getCount());
         updateResult();
-        this.sendContentUpdates();
+        this.broadcastChanges();
     }
 
     private boolean validateFunction(String expression) {

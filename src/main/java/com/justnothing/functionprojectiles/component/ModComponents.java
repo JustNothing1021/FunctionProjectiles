@@ -1,25 +1,28 @@
 package com.justnothing.functionprojectiles.component;
 
 import com.justnothing.functionprojectiles.FunctionProjectilesMod;
-import net.minecraft.component.ComponentType;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.resources.Identifier;
 
 public class ModComponents {
-    public static final ComponentType<FunctionComponent> FUNCTION =
-        Registry.register(Registries.DATA_COMPONENT_TYPE,
-            Identifier.of(FunctionProjectilesMod.MOD_ID, "function"),
-            ComponentType.<FunctionComponent>builder()
-                .codec(FunctionComponent.CODEC)
+    public static final DataComponentType<FunctionComponent> FUNCTION =
+        Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(FunctionProjectilesMod.MOD_ID, "function"),
+            DataComponentType.<FunctionComponent>builder()
+                .persistent(FunctionComponent.CODEC)
+                .networkSynchronized(ByteBufCodecs.fromCodec(FunctionComponent.CODEC))
                 .build()
         );
 
-    public static final ComponentType<ParametricComponent> PARAMETRIC =
-        Registry.register(Registries.DATA_COMPONENT_TYPE,
-            Identifier.of(FunctionProjectilesMod.MOD_ID, "parametric"),
-            ComponentType.<ParametricComponent>builder()
-                .codec(ParametricComponent.CODEC)
+    public static final DataComponentType<ParametricComponent> PARAMETRIC =
+        Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE,
+            Identifier.fromNamespaceAndPath(FunctionProjectilesMod.MOD_ID, "parametric"),
+            DataComponentType.<ParametricComponent>builder()
+                .persistent(ParametricComponent.CODEC)
+                .networkSynchronized(ByteBufCodecs.fromCodec(ParametricComponent.CODEC))
                 .build()
         );
 

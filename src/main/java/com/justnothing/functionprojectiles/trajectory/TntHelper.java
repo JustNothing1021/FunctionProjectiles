@@ -2,7 +2,7 @@ package com.justnothing.functionprojectiles.trajectory;
 
 import com.justnothing.functionprojectiles.component.FunctionComponent;
 import com.justnothing.functionprojectiles.component.ParametricComponent;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
 
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,11 +21,11 @@ public class TntHelper {
     private static final ConcurrentHashMap<BlockPos, TntPlacement> placements = new ConcurrentHashMap<>();
 
     public static void save(BlockPos pos, FunctionComponent func, ParametricComponent param, float yaw) {
-        placements.put(pos.toImmutable(), new TntPlacement(func, param, yaw));
+        placements.put(pos.immutable(), new TntPlacement(func, param, yaw));
     }
 
     public static TntPlacement consume(BlockPos pos) {
-        return placements.remove(pos.toImmutable());
+        return placements.remove(pos.immutable());
     }
 
     public static void clearAll() {

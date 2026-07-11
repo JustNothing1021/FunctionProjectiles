@@ -5,120 +5,108 @@ import com.justnothing.functionprojectiles.component.FunctionComponent;
 import com.justnothing.functionprojectiles.component.ModComponents;
 import com.justnothing.functionprojectiles.component.ParametricComponent;
 import com.justnothing.functionprojectiles.network.ModNetworking;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 
-public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandler> {
+public class FunctionAnvilScreen extends AbstractContainerScreen<FunctionAnvilScreenHandler> {
 
-    private static final Identifier TEXTURE = Identifier.of("minecraft", "textures/gui/container/anvil.png");
-    private TextFieldWidget expressionField;
-    private ButtonWidget modeButton;
+    private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("minecraft", "textures/gui/container/anvil.png");
+    private EditBox expressionField;
+    private Button modeButton;
     private boolean autoFilled = false;
     private ItemStack lastInputStack = ItemStack.EMPTY;
 
-    public FunctionAnvilScreen(FunctionAnvilScreenHandler handler,
-                                PlayerInventory inventory, Text title) {
-        super(handler, inventory, title);
-        this.backgroundWidth = 176;
-        this.backgroundHeight = 166;
-        this.playerInventoryTitleY = this.backgroundHeight - 94;
+    public FunctionAnvilScreen(FunctionAnvilScreenHandler menu,
+                                Inventory inventory, Component title) {
+        super(menu, inventory, title, 176, 166);
+        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
     protected void init() {
         super.init();
-        int x = (this.width - this.backgroundWidth) / 2;
-        int y = (this.height - this.backgroundHeight) / 2;
+        int x = (this.width - this.imageWidth) / 2;
+        int y = (this.height - this.imageHeight) / 2;
 
         // Expression input field - positioned in the rename area of the anvil
-        this.expressionField = new TextFieldWidget(this.textRenderer,
-            x + 59, y + 20, 112, 16, Text.literal("Expression"));
-        this.expressionField.setDrawsBackground(true);
+        this.expressionField = new EditBox(this.font,
+            x + 59, y + 20, 112, 16, Component.literal("Expression"));
+        this.expressionField.setBordered(true);
         this.expressionField.setMaxLength(1024);
-        this.expressionField.setChangedListener(this::onExpressionChanged);
+        this.expressionField.setResponder(this::onExpressionChanged);
         updatePlaceholder();
-        this.addSelectableChild(this.expressionField);
+        this.addRenderableWidget(this.expressionField);
         this.setInitialFocus(this.expressionField);
 
         // Mode toggle button - below the anvil area, above player inventory
-        this.modeButton = ButtonWidget.builder(
+        this.modeButton = Button.builder(
             getModeButtonText(),
             button -> toggleMode()
-        ).dimensions(x + 44, y + 68, 88, 16).build();
-        this.addDrawableChild(this.modeButton);
+        ).bounds(x + 44, y + 68, 88, 16).build();
+        this.addRenderableWidget(this.modeButton);
     }
 
     private void onExpressionChanged(String text) {
-        this.handler.setNewItemName(text);
+        this.menu.setNewItemName(text);
         ClientPlayNetworking.send(new ModNetworking.FunctionAnvilUpdatePayload(
-            text, this.handler.getMode()
+            text, this.menu.getMode()
         ));
     }
 
     private void toggleMode() {
-        String currentMode = this.handler.getMode();
+        String currentMode = this.menu.getMode();
         String newMode = "function".equals(currentMode) ? "parametric" : "function";
-        this.handler.setMode(newMode);
+        this.menu.setMode(newMode);
         this.modeButton.setMessage(getModeButtonText());
         updatePlaceholder();
-        this.expressionField.setText("");
+        this.expressionField.setValue("");
         ClientPlayNetworking.send(new ModNetworking.FunctionAnvilUpdatePayload(
             "", newMode
         ));
     }
 
-    private Text getModeButtonText() {
-        return "parametric".equals(this.handler.getMode())
-            ? Text.translatable("function-projectiles.mode.parametric")
-            : Text.translatable("function-projectiles.mode.function");
+    private Component getModeButtonText() {
+        return "parametric".equals(this.menu.getMode())
+            ? Component.translatable("function-projectiles.mode.parametric")
+            : Component.translatable("function-projectiles.mode.function");
     }
 
     private void updatePlaceholder() {
         if (this.expressionField == null) return;
-        if ("parametric".equals(this.handler.getMode())) {
-            this.expressionField.setPlaceholder(Text.literal("x(t)|y(t)|z(t)"));
+        if ("parametric".equals(this.menu.getMode())) {
+            this.expressionField.setHint(Component.literal("x(t)|y(t)|z(t)"));
         } else {
-            this.expressionField.setPlaceholder(Text.literal("f(x)"));
+            this.expressionField.setHint(Component.literal("f(x)"));
         }
     }
 
     @Override
-    protected void drawForeground(DrawContext context, int mouseX, int mouseY) {
-        super.drawForeground(context, mouseX, mouseY);
-        // Draw expression label above the text field area
-        String label = "parametric".equals(this.handler.getMode())
-            ? "x(t)|y(t)|z(t):" : "f(x) =";
-        context.drawText(this.textRenderer, label, 59, 11, 0x808080, false);
-    }
-
-    @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        if (this.expressionField != null) {
-            this.expressionField.render(context, mouseX, mouseY, delta);
-        }
+    protected void containerTick() {
+        super.containerTick();
         // Auto-fill expression from existing component only once when item is first placed
-        ItemStack currentInput = this.handler.slots.get(0).getStack();
-        boolean inputChanged = !ItemStack.areEqual(lastInputStack, currentInput);
+        ItemStack currentInput = this.menu.slots.get(0).getItem();
+        boolean inputChanged = !ItemStack.isSameItemSameComponents(lastInputStack, currentInput);
         if (inputChanged) {
             lastInputStack = currentInput.copy();
             autoFilled = false;
         }
-        if (!autoFilled && expressionField != null && expressionField.getText().isEmpty() && !currentInput.isEmpty()) {
+        if (!autoFilled && expressionField != null && expressionField.getValue().isEmpty() && !currentInput.isEmpty()) {
             FunctionComponent fc = currentInput.get(ModComponents.FUNCTION);
             if (fc != null) {
-                expressionField.setText(fc.expression());
+                expressionField.setValue(fc.expression());
                 onExpressionChanged(fc.expression());
-                // Also sync mode
-                if (!"function".equals(this.handler.getMode())) {
-                    this.handler.setMode("function");
+                if (!"function".equals(this.menu.getMode())) {
+                    this.menu.setMode("function");
                     this.modeButton.setMessage(getModeButtonText());
                     updatePlaceholder();
                 }
@@ -126,10 +114,10 @@ public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandle
                 ParametricComponent pc = currentInput.get(ModComponents.PARAMETRIC);
                 if (pc != null) {
                     String expr = pc.expressionX() + "|" + pc.expressionY() + "|" + pc.expressionZ();
-                    expressionField.setText(expr);
+                    expressionField.setValue(expr);
                     onExpressionChanged(expr);
-                    if (!"parametric".equals(this.handler.getMode())) {
-                        this.handler.setMode("parametric");
+                    if (!"parametric".equals(this.menu.getMode())) {
+                        this.menu.setMode("parametric");
                         this.modeButton.setMessage(getModeButtonText());
                         updatePlaceholder();
                     }
@@ -140,44 +128,58 @@ public class FunctionAnvilScreen extends HandledScreen<FunctionAnvilScreenHandle
     }
 
     @Override
-    protected void drawBackground(DrawContext context, float delta, int mouseX, int mouseY) {
-        int x = (this.width - this.backgroundWidth) / 2;
-        int y = (this.height - this.backgroundHeight) / 2;
-        context.drawTexture(TEXTURE, x, y, 0, 0, this.backgroundWidth, this.backgroundHeight);
+    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractBackground(graphics, mouseX, mouseY, partialTick);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, TEXTURE, this.leftPos, this.topPos, 0.0f, 0.0f, this.imageWidth, this.imageHeight, 256, 256);
     }
 
     @Override
-    public void resize(net.minecraft.client.MinecraftClient client, int width, int height) {
-        String text = this.expressionField != null ? this.expressionField.getText() : "";
-        super.resize(client, width, height);
+    public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        super.extractContents(graphics, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    protected void extractLabels(GuiGraphicsExtractor graphics, int mouseX, int mouseY) {
+        super.extractLabels(graphics, mouseX, mouseY);
+        // extractLabels is called inside a translated context (leftPos, topPos),
+        // so use relative coordinates here
+        String label = "parametric".equals(this.menu.getMode())
+            ? "x(t)|y(t)|z(t):" : "f(x) =";
+        graphics.text(this.font, label, 59, 11, 0x808080, false);
+    }
+
+    @Override
+    public void resize(int width, int height) {
+        String text = this.expressionField != null ? this.expressionField.getValue() : "";
+        super.resize(width, height);
         if (this.expressionField != null) {
-            this.expressionField.setText(text);
+            this.expressionField.setValue(text);
         }
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (this.expressionField != null && this.expressionField.isActive()) {
-            if (this.expressionField.keyPressed(keyCode, scanCode, modifiers)) {
+    public boolean keyPressed(KeyEvent keyEvent) {
+        if (this.expressionField != null && this.expressionField.isFocused()) {
+            if (this.expressionField.keyPressed(keyEvent)) {
                 return true;
             }
             // Consume key events when the text field is focused to prevent
             // game key bindings (like 'E' for inventory) from firing,
             // but allow Escape to close the screen
-            if (keyCode != 256) { // GLFW_KEY_ESCAPE
+            if (keyEvent.key() != 256) { // GLFW_KEY_ESCAPE
                 return true;
             }
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(keyEvent);
     }
 
     @Override
-    public boolean charTyped(char chr, int modifiers) {
-        if (this.expressionField != null && this.expressionField.isActive()) {
-            if (this.expressionField.charTyped(chr, modifiers)) {
+    public boolean charTyped(CharacterEvent characterEvent) {
+        if (this.expressionField != null && this.expressionField.isFocused()) {
+            if (this.expressionField.charTyped(characterEvent)) {
                 return true;
             }
         }
-        return super.charTyped(chr, modifiers);
+        return super.charTyped(characterEvent);
     }
 }

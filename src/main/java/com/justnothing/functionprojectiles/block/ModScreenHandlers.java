@@ -1,20 +1,20 @@
 package com.justnothing.functionprojectiles.block;
 
 import com.justnothing.functionprojectiles.FunctionProjectilesMod;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.resource.featuretoggle.FeatureFlags;
-import net.minecraft.screen.ScreenHandlerType;
-import net.minecraft.util.Identifier;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.inventory.MenuType;
 
 public class ModScreenHandlers {
 
-    public static final ScreenHandlerType<FunctionAnvilScreenHandler> FUNCTION_ANVIL =
-        new ScreenHandlerType<>(FunctionAnvilScreenHandler::new, FeatureFlags.VANILLA_FEATURES);
+    public static final MenuType<FunctionAnvilScreenHandler> FUNCTION_ANVIL =
+        new MenuType<>(FunctionAnvilScreenHandler::new, FeatureFlags.VANILLA_SET);
 
     public static void register() {
-        Registry.register(Registries.SCREEN_HANDLER,
-            Identifier.of(FunctionProjectilesMod.MOD_ID, "function_anvil"),
+        Registry.register(BuiltInRegistries.MENU,
+            Identifier.fromNamespaceAndPath(FunctionProjectilesMod.MOD_ID, "function_anvil"),
             FUNCTION_ANVIL);
     }
 }
