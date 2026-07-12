@@ -5,11 +5,14 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "AbstractArrowAccessor",
+    "GravityAccessor",
+    "InertiaAccessor",
     "AbstractArrowMixin",
     "BlockItemMixin",
     "ProjectileEntityMixin",
     "TntBlockMixin",
-    "TntEntityMixin"
+    "TntEntityMixin",
+    "ThrowableProjectileMixin"
   ],
   "injectors": {
     "defaultRequire": 1
